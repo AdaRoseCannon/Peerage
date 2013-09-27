@@ -15,6 +15,7 @@
         <!-- endbuild -->
         <!-- build:js scripts/vendor/modernizr.js -->
         <script src="bower_components/modernizr/modernizr.js"></script>
+        <script src="http://cdn.peerjs.com/0.3/peer.js"></script>
         <!-- endbuild -->
     </head>
     <body>
@@ -30,35 +31,49 @@
                     <li><a href="#">About</a></li>
                     <li><a href="#">Contact</a></li>
                 </ul>
-                <h3 class="text-muted">peerage</h3>
+                <h3 class="text-muted">Peerage</h3>
             </div>
-
-            <div class="jumbotron">
-                <h1>'Allo, 'Allo!</h1>
-                <p class="lead">Always a pleasure scaffolding your apps.</p>
-                <p><a class="btn btn-lg btn-success" href="#">Splendid!</a></p>
-            </div>
-
-            <div class="row marketing">
+        </div>
+        <div class="container">
+            <div class="row">
                 <div class="col-lg-6">
-                    <h4>HTML5 Boilerplate</h4>
-                    <p>HTML5 Boilerplate is a professional front-end template for building fast, robust, and adaptable web apps or sites.</p>
-
-                    <h4>Bootstrap</h4>
-                    <p>Sleek, intuitive, and powerful mobile first front-end framework for faster and easier web development.</p>
-
-                    <h4>Modernizr</h4>
-                    <p>Modernizr is an open-source JavaScript library that helps you build the next generation of HTML5 and CSS3-powered websites.</p>
-
-
-                    <h4>RequireJS</h4>
-                    <p>RequireJS is a JavaScript file and module loader. It is optimized for in-browser use, but it can be used in other JavaScript environments, like Rhino and Node.</p>
-
+                    <div class="input-group">
+                        <span class="input-group-addon">My Id</span>
+                        <input id="myId" type="text" class="form-control" placeholder="loading..." readonly="true">
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="input-group">
+                        <span class="input-group-addon glyphicon glyphicon-export"></span>
+                        <input id="theirId" type="text" class="form-control" placeholder="Their Id">
+                        <span class="input-group-btn">
+                            <a id="beingWebRTC" class="btn btn-success" href="#" onclick="return false;">Connect</a>
+                        </span>
+                    </div>
+                </div>
+                <div id="talkBox" class="col-lg-6">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Messaging</h3>
+                        </div>
+                        <ul class="list-group panel-body" id="messages">
+                            <li class="list-group-item">Welcome to p2p chat</li>
+                        </ul>
+                        <div class="input-group panel-footer">
+                            <input id="theirId" type="text" class="form-control">
+                            <span class="input-group-btn">
+                                <a id="beingWebRTC" class="btn btn-success" href="#" onclick="return false;">Send Message</a>
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
+
+        <div class="container">
 
             <div class="footer">
-                <p>♥ from the Yeoman team</p>
+                <p>♥ Ada Rose</p>
             </div>
 
         </div>
