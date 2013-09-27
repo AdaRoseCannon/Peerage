@@ -1,11 +1,23 @@
 {
   "name": "peerage",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "dependencies": {
     "sass-bootstrap": "~3.0.0",
     "requirejs": "~2.1.8",
     "modernizr": "~2.6.2",
     "jquery": "~1.10.2"
   },
-  "devDependencies": {}
+  "homepage": "https://github.com/AdaRoseEdwards/Peerage",
+  "authors": [
+    "Ada Rose Edwards <adaroseedwards@gmail.com>"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
 }
