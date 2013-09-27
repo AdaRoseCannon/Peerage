@@ -15,7 +15,7 @@
         <!-- endbuild -->
         <!-- build:js scripts/vendor/modernizr.js -->
         <script src="bower_components/modernizr/modernizr.js"></script>
-        <script src="http://cdn.peerjs.com/0.3/peer.js"></script>
+        <script src="scripts/peer.min.js"></script>
         <!-- endbuild -->
     </head>
     <body>
@@ -36,13 +36,13 @@
         </div>
         <div class="container">
             <div class="row">
-                <div class="col-lg-6">
+                <div class="col-lg-12">
                     <div class="input-group">
                         <span class="input-group-addon">My Id</span>
                         <input id="myId" type="text" class="form-control" placeholder="loading..." readonly="true">
                     </div>
                 </div>
-                <div class="col-lg-6">
+                <div class="col-lg-12">
                     <div class="input-group">
                         <span class="input-group-addon glyphicon glyphicon-export"></span>
                         <input id="theirId" type="text" class="form-control" placeholder="Their Id">
@@ -51,7 +51,7 @@
                         </span>
                     </div>
                 </div>
-                <div id="talkBox" class="col-lg-6">
+                <div id="talkBox" class="col-sm-6">
                     <div class="panel panel-default">
                         <div class="panel-heading">
                             <h3 class="panel-title">Messaging</h3>
@@ -67,6 +67,9 @@
                             </span>
                         </div>
                     </div>
+                </div>
+                <div class="col-sm-6">
+                    <div id="dropzone" class="well well-lg"></div>
                 </div>
             </div>
         </div>

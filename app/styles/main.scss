@@ -71,6 +71,27 @@ div.row>div {
     margin-bottom: 1.5em;
 }
 
+.well {
+    .dz-success-mark, .dz-error-mark, .dz-error-message {
+        display: none;
+    }
+    .dz-details {
+        display: inline-block; 
+        float: left;
+        padding: 0.5em;
+    }
+    overflow: hidden;
+}
+
+.well:empty {
+    text-align: center;
+}
+
+.well:empty::before {
+    content: 'Drag files here.';
+    font-size:2em;
+}
+
 /* Responsive: Portrait tablets and up */
 @media screen and (min-width: 768px) {
     .container {
