@@ -1,7 +1,12 @@
 {
   "name": "peerage",
   "version": "0.0.1",
-  "dependencies": {},
+  "dependencies": {
+    "peer": "~0.2.0",
+    "express": "~3.4.0",
+    "requirejs": "~2.1.8",
+    "node-sass": "~0.6.6"
+  },
   "devDependencies": {
     "grunt": "~0.4.1",
     "grunt-contrib-copy": "~0.4.1",
@@ -43,7 +48,7 @@
     "url": "git@github.com:AdaRoseEdwards/Peerage.git"
   },
   "author": "Ada Rose Edwards",
-  "license": "MIT",
+  "license": "BSD-2-Clause",
   "bugs": {
     "url": "https://github.com/AdaRoseEdwards/Peerage/issues"
   }
