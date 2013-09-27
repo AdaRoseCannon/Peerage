@@ -1,6 +1,7 @@
 require.config({
     paths: {
         jquery: '../bower_components/jquery/jquery',
+        filesaver: '../bower_components/file-saver/FileSaver',
         bootstrapAffix: '../bower_components/sass-bootstrap/js/affix',
         bootstrapAlert: '../bower_components/sass-bootstrap/js/alert',
         bootstrapButton: '../bower_components/sass-bootstrap/js/button',
