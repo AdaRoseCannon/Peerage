@@ -47,7 +47,7 @@
                         <span class="input-group-addon glyphicon glyphicon-export"></span>
                         <input id="theirId" type="text" class="form-control" placeholder="Their Id">
                         <span class="input-group-btn">
-                            <a id="beingWebRTC" class="btn btn-success" href="#" onclick="return false;">Connect</a>
+                            <a id="beginWebRTC" class="btn btn-success" href="#" onclick="return false;">Connect</a>
                         </span>
                     </div>
                 </div>
@@ -58,11 +58,12 @@
                         </div>
                         <ul class="list-group panel-body" id="messages">
                             <li class="list-group-item">Welcome to p2p chat</li>
+                            <li class="list-group-item">Waiting for other users...</li>
                         </ul>
                         <div class="input-group panel-footer">
-                            <input id="theirId" type="text" class="form-control">
+                            <input id="messageInput" type="text" class="form-control">
                             <span class="input-group-btn">
-                                <a id="beingWebRTC" class="btn btn-success" href="#" onclick="return false;">Send Message</a>
+                                <a id="sendMessage" class="btn btn-success" href="#" onclick="return false;">Send Message</a>
                             </span>
                         </div>
                     </div>
