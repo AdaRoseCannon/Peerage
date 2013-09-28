@@ -17,7 +17,7 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		var node=document.createElement('li');
 		node.classList.add('list-group-item');
 		node.innerHTML = '<a href="#" onclick="return false;"> ' + name + ': ' + data + '</a>';
-		node.onclick = function() { useDataConn.rawSend(origin, {timestamp: Date.now(), type: 'fileRequest', file: data}); return false; };
+		node.onclick = function() { useDataConn.rawSend(origin, {timestamp: Date.now(), type: 'fileRequest', file: data, user: peerId}); return false; };
 		messages.appendChild(node);
 	}
 
@@ -42,16 +42,18 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 			saveAs(blob, data.file);
 			break;
 		case 'fileRequest':
-			console.log('Request recieved');
+			console.log('Request recieved (data): ' + data);
 			for(var i in myDropzone.files) {
 				if(myDropzone.files[i].name === data.file){
 					data.blob = myDropzone.files[i];
 					break;
 				}
 			}
+			data.timestamp = Date.now();
+			var target = data.user;
 			data.user = peerId;
 			data.type = 'fileDownload';
-			useDataConn.rawSend(data.user, data);
+			useDataConn.rawSend(target, data);
 			break;
 		}
 	}
@@ -59,8 +61,8 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	function recieveData (data) {
 		useDataConn.updateListDisplay();
 		if (timestamps.indexOf(data.timestamp) === -1) {
+			processData(data);
 			if (data.type !== 'fileDownload' && data.type !== 'fileRequest') {
-				processData(data);
 				//This message is new to me so I will retransmit to make sure everyone else has it.
 				timestamps.push(data.timestamp);
 				useDataConn.retransmit(data);
@@ -96,12 +98,9 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		};
 
 		this.rawSend = function (id, data) {
-			for(var i in this.connections) {
-				if (this.connections[i].peer === id) {
-					console.log('requesting "' + data.type + '" from ' + this.connections[i].peer);
-					this.connections[i].send(JSON.parse(JSON.stringify(data)));
-				}
-			}
+			console.log('requesting "' + data.type + '" from ' + this.connections[id].peer);
+			console.log(JSON.stringify(data));
+			this.connections[id].send(data);
 		};
 
 		this.send = function (data) {
