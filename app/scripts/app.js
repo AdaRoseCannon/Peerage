@@ -9,12 +9,12 @@ var people = $('#people').get(0);
 var peerId;
 var timestamps = [];
 var useDataConn;
+var currentCall;
 navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 
 define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	'use strict';
 	var myDropzone = new Dropzone('#dropzone', { url: '/', autoProcessQueue: false});
-
 
 	$.fn.dndhover = function(options) {
 
@@ -67,6 +67,11 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	    }
 	});
 
+	$("#closevideo").on("click", function () {
+		document.body.classList.remove('video');
+		currentCall.close();
+	}); 
+
 	function addDownloadLink (name, data, origin) {
 		var node=document.createElement('li');
 		node.classList.add('list-group-item');
@@ -82,11 +87,15 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		messages.appendChild(node);
 	}
 
-	function handleStream(stream) {
+	function handleStream(stream, call) {
 		document.body.classList.add('video');
 		var video = document.getElementById("video");
 		video.src = stream;
 		video.play();
+		call.on('close', function () {
+			document.body.classList.remove('video');
+			call.close();
+		});
 		if (window.webkitURL) {
 			video.src = window.webkitURL.createObjectURL(stream);
 			video.play();
@@ -149,9 +158,10 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	function makeCall(id) {
 		navigator.getUserMedia({video: true, audio: true}, function(stream) {
 			var call = peer.call(id, stream);
+			currentCall = call;
 			call.on('stream', function(remoteStream) {
 				// Show stream in some video/canvas element.
-				handleStream(remoteStream);
+				handleStream(remoteStream, call);
 			});
 		}, function(err) {
 			console.log('Failed to get local stream' ,err);
@@ -243,10 +253,11 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	});
 
 	peer.on('call', function(call) {
+		currentCall = call;
 		navigator.getUserMedia({video: true, audio: true}, function(stream) {
 			call.answer(stream); // Answer the call with an A/V stream.
 			call.on('stream', function(remoteStream) {
-				handleStream(remoteStream);
+				handleStream(remoteStream, call);
 				// Show stream in some video/canvas element.
 			});
 		}, function(err) {
