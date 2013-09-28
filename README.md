@@ -7,8 +7,8 @@ Share files make video calls. Only works in chrome at the moment!
 
 ## Install
 
-`bower install
+`bower install`
 
-npm install
+`npm install`
 
-node ./main.js`
+`node ./main.js`
