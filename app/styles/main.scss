@@ -49,6 +49,7 @@ $icon-font-path: "/bower_components/sass-bootstrap/fonts/";
 body {
     padding-top: 20px;
     padding-bottom: 20px;
+    height:100%;
 }
 
 /* Everything but the jumbotron gets side spacing for mobile first views */
@@ -107,7 +108,28 @@ div.row>div {
     margin-bottom: 1.5em;
 }
 
-.well {
+#messages, #people {
+    padding: 0;
+    max-height: 18em;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.header > h3 {
+    display: inline-block;
+}
+
+#dropzone {
+    position: relative;
+    height:90%;
+    top: 5%;
+    margin: 0 1em;
+    display: none;
+    float:right;
+    z-index:100;
+}
+
+#dropzone {
     .dz-success-mark, .dz-error-mark, .dz-error-message {
         display: none;
     }
@@ -119,20 +141,87 @@ div.row>div {
     overflow: hidden;
 }
 
-.well:empty {
+#dropzone:empty {
     text-align: center;
+    display: inline-block;
 }
 
-.well:empty::before {
-    content: 'Drag files here.';
-    font-size:2em;
+#dropzone:empty::before {
+    content: 'Drag files to upload.';
+    font-size:1.5em;
 }
 
-#messages {
-    padding: 0;
-    max-height: 18em;
-    overflow-y: auto;
-    overflow-x: hidden;
+.input-group-addon.glyphicon {
+    top: 0;
+}
+
+body.dropMe {
+    #dropzone {
+        display: block;
+        -webkit-filter: none;
+        pointer-events: auto;
+        width:90%;
+        left: 5%;
+        position:absolute;
+        background: rgba(50,50,50,0.3);
+    }
+
+    .container {
+        -webkit-filter: blur(2px);
+        pointer-events: none;
+    }
+
+}
+
+#videolayer {
+    position:absolute;
+    background: rgba(0,0,0,0.5);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    z-index: 100;
+}
+
+body.video {
+    #videolayer {
+        display:block;
+    }
+
+    #dropzone {
+        display: none;
+    }
+
+    .container {
+        -webkit-filter: blur(2px);
+        pointer-events: none;
+    }
+}
+
+.hidebegin {
+    opacity: 1;
+    transition: opacity .25s ease-in-out;
+    -moz-transition: opacity .25s ease-in-out;
+    -webkit-transition: opacity .25s ease-in-out;
+}
+
+body.hidebeginbody .hidebegin {
+    opacity: 0;
+}
+
+#videolayer > video {
+  margin: auto;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+}
+
+#videolayer > #closevideo {
+  position: absolute;
+  top: 1em; right: 1em;
+  font-size: 3em;
+  color: white;
+  text-shadow:0px 0px 8px #000000;
 }
 
 /* Responsive: Portrait tablets and up */

@@ -18,68 +18,70 @@
         <script src="scripts/peer.min.js"></script>
         <!-- endbuild -->
     </head>
-    <body>
+    <body class="hidebeginbody">
         <!--[if lt IE 10]>
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
-
-
-        <div class="container">
-            <div class="header">
-                <ul class="nav nav-pills pull-right">
-                    <li class="active"><a href="#">Home</a></li>
-                    <li><a href="#">About</a></li>
-                    <li><a href="#">Contact</a></li>
-                </ul>
-                <h3 class="text-muted">Peerage</h3>
+        <div id="videolayer"><video id="video" width="640" height="480" autoplay></video><span id="#closevideo" class=".glyphicon .glyphicon-remove"></span></div>
+        <div id="mainBodyContent">
+            <div id="dropzone" class="well well-sm text-muted hidebegin"></div>
+            <div class="container">
+                <div class="header">
+                    <h3 class="text-muted">Peerage</h3>
+                </div>
             </div>
-        </div>
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="input-group">
-                        <span class="input-group-addon">My Id</span>
-                        <input id="myId" type="text" class="form-control" placeholder="loading..." readonly="true">
-                    </div>
-                </div>
-                <div class="col-lg-12">
-                    <div class="input-group">
-                        <span class="input-group-addon glyphicon glyphicon-export"></span>
-                        <input id="theirId" type="text" class="form-control" placeholder="Their Id">
-                        <span class="input-group-btn">
-                            <a id="beginWebRTC" class="btn btn-success" href="#" onclick="return false;">Connect</a>
-                        </span>
-                    </div>
-                </div>
-                <div id="talkBox" class="col-sm-6">
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <h3 class="panel-title">Messaging</h3>
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="input-group">
+                            <span class="input-group-addon">My Id</span>
+                            <input id="myId" type="text" class="form-control" placeholder="loading..." readonly="true">
                         </div>
-                        <ul class="list-group panel-body" id="messages">
-                            <li class="list-group-item">Welcome to p2p chat</li>
-                            <li class="list-group-item">Waiting for other users...</li>
-                        </ul>
-                        <div class="input-group panel-footer">
-                            <input id="messageInput" type="text" class="form-control">
+                    </div>
+                    <div class="col-lg-12">
+                        <div class="input-group">
+                            <span class="input-group-addon glyphicon glyphicon-export"></span>
+                            <input id="theirId" type="text" class="form-control" placeholder="Their Id">
                             <span class="input-group-btn">
-                                <a id="sendMessage" class="btn btn-success" href="#" onclick="return false;">Send Message</a>
+                                <a id="beginWebRTC" class="btn btn-success" href="#" onclick="return false;">Connect</a>
                             </span>
                         </div>
                     </div>
-                </div>
-                <div class="col-sm-6">
-                    <div id="dropzone" class="well well-lg"></div>
+                    <div id="talkBox" class="col-sm-8 hidebegin">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h3 class="panel-title">Messaging</h3>
+                            </div>
+                            <ul class="list-group panel-body" id="messages">
+                                <li class="list-group-item">Welcome to p2p chat</li>
+                                <li class="list-group-item">Waiting for other users...</li>
+                            </ul>
+                            <div class="input-group panel-footer">
+                                <input id="messageInput" type="text" class="form-control">
+                                <span class="input-group-btn">
+                                    <a id="sendMessage" class="btn btn-success" href="#" onclick="return false;">Send Message</a>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="peopleBox" class="col-sm-4 hidebegin">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h3 class="panel-title">Known People</h3>
+                            </div>
+                            <ul class="list-group panel-body" id="people">
+                                <li class="list-group-item">Not connected :(</li>
+                            </ul>
+                        </div>
+                    </div>
+
                 </div>
             </div>
-        </div>
-
-        <div class="container">
-
-            <div class="footer">
-                <p>♥ Ada Rose</p>
+            <div class="container">
+                <div class="footer">
+                    <p>♥ Ada Rose</p>
+                </div>
             </div>
-
         </div>
 
 

@@ -5,13 +5,67 @@ var textData = $('#messageInput');
 var connectBtn = $('#beginWebRTC');
 var messageBtn = $('#sendMessage');
 var messages = $('#messages').get(0);
+var people = $('#people').get(0);
 var peerId;
 var timestamps = [];
 var useDataConn;
+navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 
 define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	'use strict';
 	var myDropzone = new Dropzone('#dropzone', { url: '/', autoProcessQueue: false});
+
+
+	$.fn.dndhover = function(options) {
+
+	    return this.each(function() {
+
+	        var self = $(this);
+	        var collection = $();
+
+	        self.on('dragenter', function(event) {
+	            if (collection.size() === 0) {
+	                self.trigger('dndHoverStart');
+	            }
+	            collection = collection.add(event.target);
+	        });
+
+	        self.on('dragleave', function(event) {
+	            /*
+	             * Firefox 3.6 fires the dragleave event on the previous element
+	             * before firing dragenter on the next one so we introduce a delay
+	             */
+	            setTimeout(function() {
+	                collection = collection.not(event.target);
+	                if (collection.size() === 0) {
+	                    self.trigger('dndHoverEnd');
+	                }
+	            }, 1);
+	        });
+	    });
+	};
+
+	$(document).dndhover().on({
+	    'dndHoverStart': function(event) {
+	        $(document.body).addClass('dropMe');
+	    },
+	    'dndHoverEnd': function(event) {
+	    	setTimeout(function () {
+	       		$(document.body).removeClass('dropMe');
+	    	}, 2000);
+	    }
+	});
+
+	$("#dropzone").dndhover().on({
+	    'dndHoverStart': function(event) {
+	        $(document.body).addClass('dropMe');
+	    },
+	    'dndHoverEnd': function(event) {
+	    	setTimeout(function () {
+	       		$(document.body).removeClass('dropMe');
+	    	}, 2000);
+	    }
+	});
 
 	function addDownloadLink (name, data, origin) {
 		var node=document.createElement('li');
@@ -26,6 +80,20 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		node.classList.add('list-group-item');
 		node.innerHTML = name + ': ' + data;
 		messages.appendChild(node);
+	}
+
+	function handleStream(stream) {
+		document.body.classList.add('video');
+		var video = document.getElementById("video");
+		video.src = stream;
+		video.play();
+		if (window.webkitURL) {
+			video.src = window.webkitURL.createObjectURL(stream);
+			video.play();
+		} else {
+			video.src = stream;
+			video.play();
+		}
 	}
 
 	function processData(data) {
@@ -78,20 +146,44 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		}
 	}
 
+	function makeCall(id) {
+		navigator.getUserMedia({video: true, audio: true}, function(stream) {
+			var call = peer.call(id, stream);
+			call.on('stream', function(remoteStream) {
+				// Show stream in some video/canvas element.
+				handleStream(remoteStream);
+			});
+		}, function(err) {
+			console.log('Failed to get local stream' ,err);
+		});
+	}
+
 	function UseDataConn () {
 		this.connections = {};
 
 		this.updateListDisplay = function () {
-			var d = '';
+			people.innerHTML = '';
+			var count = 0;
 			for(var i in this.connections) {
+				theirId.get(0).value = '';
 				if (this.connections[i].open) {
-					d = d + this.connections[i].peer + ', ';
+					count++;
+					var node=document.createElement('li');
+					node.classList.add('list-group-item');
+					node.innerHTML = '<a href="#" onclick="return false;">' + this.connections[i].peer + '</a>';
+					node.innerHTML += '<span class="badge"><span class="phonebutton glyphicon glyphicon-earphone"></span></span>';
+					node.onclick = function() { makeCall(useDataConn.connections[i].peer); return false;};
+					people.appendChild(node);
 				} else {
 					this.connections[i].close();
 					delete this.connections[i];
 				}
 			}
-			theirId.get(0).value = d;
+			if (count !== 0) {
+				document.body.classList.remove('hidebeginbody');
+			} else {
+				document.body.classList.add('hidebeginbody');
+			}
 		};
 
 		this.add = function (dataConn) {
@@ -101,7 +193,8 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 				recieveData (data);
 			});
 			dataConn.on('close',function () {
-				addMessage ('Channel Status', 'Closed');
+				useDataConn.updateListDisplay();
+				addMessage ('Connection Status', 'Closed');
 			});
 		};
 
@@ -147,6 +240,18 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	peer.on('open', function(id) {
 		myId.get(0).value = id;
 		peerId = id;
+	});
+
+	peer.on('call', function(call) {
+		navigator.getUserMedia({video: true, audio: true}, function(stream) {
+			call.answer(stream); // Answer the call with an A/V stream.
+			call.on('stream', function(remoteStream) {
+				handleStream(remoteStream);
+				// Show stream in some video/canvas element.
+			});
+		}, function(err) {
+			console.log('Failed to get local stream' ,err);
+		});
 	});
 
 	connectBtn.on('click', function () {
@@ -197,6 +302,7 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		useDataConn.send('Disconnecting');
 		useDataConn.close();
 	};
+
 
 	return '\'Allo \'Allo!';
 });
