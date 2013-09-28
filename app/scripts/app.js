@@ -170,10 +170,22 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		addMessage ('Error', error);
 	});
 
-	messageBtn.on('click', function () {
+	function submitmessage () {
 		var data = textData.get(0).value;
+		textData.get(0).value = '';
 		useDataConn.send(data);
 		addMessage('Me', data);
+		messages.scrollTop = messages.scrollHeight;
+	}
+	textData.on('keyup', function(e) {
+		if (e.which == 13 || event.keyCode == 13) {
+			submitmessage();
+			e.preventDefault();
+			return false;
+		}
+	});
+	messageBtn.on('click', function () {
+		submitmessage();
 	});
 
 	myDropzone.on('addedfile', function (file) {

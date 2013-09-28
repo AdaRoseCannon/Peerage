@@ -2,6 +2,42 @@ $icon-font-path: "/bower_components/sass-bootstrap/fonts/";
 
 @import './app/bower_components/sass-bootstrap/lib/bootstrap';
 
+::-webkit-scrollbar {
+  width: 5px;
+  height: 13px;
+}
+
+::-webkit-scrollbar:hover {
+  height: 18px;
+}
+
+::-webkit-scrollbar-button:start:decrement,
+::-webkit-scrollbar-button:end:increment {
+  display: none;
+}
+
+::-webkit-scrollbar-track-piece {
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb:vertical {
+  height: 50px;
+  background: -webkit-gradient(linear, left top, right top, color-stop(0%, #4d4d4d), color-stop(100%, #333333));
+  border: 1px solid #0d0d0d;
+  border-top: 1px solid #666666;
+  border-left: 1px solid #666666;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:horizontal {
+  width: 50px;
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #4d4d4d), color-stop(100%, #333333));
+  border: 1px solid #1f1f1f;
+  border-top: 1px solid #666666;
+  border-left: 1px solid #666666;
+  border-radius: 4px;
+}
+
 .browsehappy {
     margin: 0.2em 0;
     background: #ccc;
@@ -90,6 +126,13 @@ div.row>div {
 .well:empty::before {
     content: 'Drag files here.';
     font-size:2em;
+}
+
+#messages {
+    padding: 0;
+    max-height: 18em;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* Responsive: Portrait tablets and up */
