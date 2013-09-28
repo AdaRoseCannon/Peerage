@@ -11,7 +11,7 @@ var useDataConn;
 
 define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	'use strict';
-	var myDropzone = new Dropzone('#dropzone', { url: '/'});
+	var myDropzone = new Dropzone('#dropzone', { url: '/', autoProcessQueue: false});
 
 	function addDownloadLink (name, data, origin) {
 		var node=document.createElement('li');
@@ -42,18 +42,25 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 			saveAs(blob, data.file);
 			break;
 		case 'fileRequest':
-			console.log('Request recieved (data): ' + data);
+			var reader = new FileReader();
 			for(var i in myDropzone.files) {
 				if(myDropzone.files[i].name === data.file){
-					data.blob = myDropzone.files[i];
+					reader.readAsBinaryString(myDropzone.files[i]);
 					break;
 				}
 			}
-			data.timestamp = Date.now();
 			var target = data.user;
-			data.user = peerId;
-			data.type = 'fileDownload';
-			useDataConn.rawSend(target, data);
+			var data2 = JSON.parse(JSON.stringify(data));
+			reader.onload = function (blob) {
+				data2.blob = blob;
+				data2.timestamp = Date.now();
+				data2.user = peerId;
+				data2.type = 'fileDownload';
+				useDataConn.rawSend(target, data2);
+			};
+			reader.onerror = function (e) {
+				console.log(e);
+			}
 			break;
 		}
 	}
@@ -99,7 +106,6 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 
 		this.rawSend = function (id, data) {
 			console.log('requesting "' + data.type + '" from ' + this.connections[id].peer);
-			console.log(JSON.stringify(data));
 			this.connections[id].send(data);
 		};
 
