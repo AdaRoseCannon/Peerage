@@ -38,21 +38,22 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 			addDownloadLink(data.user + ' is sending', data.file, data.user);
 			break;
 		case 'fileDownload':
-			var blob = new Blob(data.blob, {type: data.filetype});
-			saveAs(blob, data.file);
+			var blob = new Blob([data.blob], {type: data.filetype});
+			window.saveAs(blob, data.file);
 			break;
 		case 'fileRequest':
 			var reader = new FileReader();
+			var target = data.user;
+			var data2 = JSON.parse(JSON.stringify(data));
 			for(var i in myDropzone.files) {
 				if(myDropzone.files[i].name === data.file){
-					reader.readAsBinaryString(myDropzone.files[i]);
+					reader.readAsArrayBuffer(myDropzone.files[i]);
+					//data2.fileblob = myDropzone.files[i];
 					break;
 				}
 			}
-			var target = data.user;
-			var data2 = JSON.parse(JSON.stringify(data));
-			reader.onload = function (blob) {
-				data2.blob = blob;
+			reader.onload = function (progress) {
+				data2.blob = reader.result;
 				data2.timestamp = Date.now();
 				data2.user = peerId;
 				data2.type = 'fileDownload';
@@ -150,7 +151,7 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 
 	connectBtn.on('click', function () {
 		var dataConn = peer.connect(theirId.get(0).value, {
-			reliable: false
+			reliable: true
 		});
 		dataConn.on('open', function() {
 			useDataConn.add(dataConn);
