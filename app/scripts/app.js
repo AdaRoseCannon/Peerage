@@ -10,67 +10,83 @@ var peerId;
 var timestamps = [];
 var useDataConn;
 var currentCall;
+var _files = {};
+var _chunksize = 10000;
+
+
 navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 
 define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	'use strict';
 	var myDropzone = new Dropzone('#dropzone', { url: '/', autoProcessQueue: false});
 
-	$.fn.dndhover = function(options) {
+	function pad(n, len) {
+		return (new Array(len + 1).join('0') + n).slice(-len);
+	}
 
-	    return this.each(function() {
+	function ab2str(buf) {
+		return String.fromCharCode.apply(null, new Uint16Array(buf));
+	}
 
-	        var self = $(this);
-	        var collection = $();
+	function str2ab(str) {
+		var buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
+		var bufView = new Uint16Array(buf);
+		for (var i=0, strLen=str.length; i<strLen; i++) {
+			bufView[i] = str.charCodeAt(i);
+		}
+		return buf;
+	}
 
-	        self.on('dragenter', function(event) {
-	            if (collection.size() === 0) {
-	                self.trigger('dndHoverStart');
-	            }
-	            collection = collection.add(event.target);
-	        });
+	$.fn.dndhover = function() {
+		return this.each(function() {
 
-	        self.on('dragleave', function(event) {
-	            /*
-	             * Firefox 3.6 fires the dragleave event on the previous element
-	             * before firing dragenter on the next one so we introduce a delay
-	             */
-	            setTimeout(function() {
-	                collection = collection.not(event.target);
-	                if (collection.size() === 0) {
-	                    self.trigger('dndHoverEnd');
-	                }
-	            }, 1);
-	        });
-	    });
+			var self = $(this);
+			var collection = $();
+
+			self.on('dragenter', function(event) {
+				if (collection.size() === 0) {
+					self.trigger('dndHoverStart');
+				}
+				collection = collection.add(event.target);
+			});
+
+			self.on('dragleave', function(event) {
+				setTimeout(function() {
+					collection = collection.not(event.target);
+					if (collection.size() === 0) {
+						self.trigger('dndHoverEnd');
+					}
+				}, 1);
+			});
+		});
 	};
 
 	$(document).dndhover().on({
-	    'dndHoverStart': function(event) {
-	        $(document.body).addClass('dropMe');
-	    },
-	    'dndHoverEnd': function(event) {
-	    	setTimeout(function () {
-	       		$(document.body).removeClass('dropMe');
-	    	}, 2000);
-	    }
+		'dndHoverStart': function() {
+			$(document.body).addClass('dropMe');
+		},
+		'dndHoverEnd': function() {
+			setTimeout(function () {
+				$(document.body).removeClass('dropMe');
+			}, 2000);
+		}
 	});
 
-	$("#dropzone").dndhover().on({
-	    'dndHoverStart': function(event) {
-	        $(document.body).addClass('dropMe');
-	    },
-	    'dndHoverEnd': function(event) {
-	    	setTimeout(function () {
-	       		$(document.body).removeClass('dropMe');
-	    	}, 2000);
-	    }
+	$('#dropzone').dndhover().on({
+		'dndHoverStart': function() {
+			$(document.body).addClass('dropMe');
+		},
+		'dndHoverEnd': function() {
+			setTimeout(function () {
+				$(document.body).removeClass('dropMe');
+			}, 2000);
+		}
 	});
 
-	$("#closevideo").on("click", function () {
+	$('#closevideo').on('click', function () {
 		document.body.classList.remove('video');
 		currentCall.close();
-	}); 
+	});
 
 	function addDownloadLink (name, data, origin) {
 		var node=document.createElement('li');
@@ -89,7 +105,7 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 
 	function handleStream(stream, call) {
 		document.body.classList.add('video');
-		var video = document.getElementById("video");
+		var video = document.getElementById('video');
 		video.src = stream;
 		video.play();
 		call.on('close', function () {
@@ -106,38 +122,59 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	}
 
 	function processData(data) {
-		console.log(data.type + " signal sent");
+		console.log(data.type + ' signal sent');
 		switch(data.type) {
 		case 'message':
 			addMessage (data.user, data.data);
 			break;
-		case 'file':
+		case 'file': // Alerted a file is available
 			addDownloadLink(data.user + ' is sending', data.file, data.user);
 			break;
-		case 'fileDownload':
-			var blob = new Blob([data.blob], {type: data.filetype});
-			window.saveAs(blob, data.file);
-			break;
-		case 'fileRequest':
-			var reader = new FileReader();
+		case 'fileRequest': // Recieved a request that someone wants to download a file
 			var target = data.user;
-			var data2 = JSON.parse(JSON.stringify(data));
-			for(var i in myDropzone.files) {
-				if(myDropzone.files[i].name === data.file){
-					reader.readAsArrayBuffer(myDropzone.files[i]);
-					//data2.fileblob = myDropzone.files[i];
-					break;
-				}
+			var data2 = {};//JSON.parse(JSON.stringify(data));
+			data2.piece = 0;
+			if (data.needed) {
+				//convert int to 0/1 array 
+				var hasArray = pad((data.needed).toString(2),data.totalChunks).split('').map(parseFloat);
+				//need to make this more clever for multiple peers
+				data2.piece = hasArray.indexOf(0);
 			}
-			reader.onload = function (progress) {
-				data2.blob = reader.result;
-				data2.timestamp = Date.now();
-				data2.user = peerId;
-				data2.type = 'fileDownload';
-				useDataConn.rawSend(target, data2);
-			};
-			reader.onerror = function (e) {
-				console.log(e);
+			data2.blob = _files[data.file].chunks[data2.blob];
+			data2.totalChunks = _files[data.file].chunks.length;
+			data2.timestamp = Date.now();
+			data2.user = peerId;
+			data2.type = 'fileDownload';
+			data2.filename = data.file;
+			data2.filesize = _files[data.file].size;
+			data2.filetype = _files[data.file].type;
+			data2.firstPiece =  (data.firstPiece === undefined);
+			useDataConn.rawSend(target, data2);
+			break;
+		case 'fileDownload': // A file has been given to you.
+			if (data.firstPiece) {
+				_files[data.filename] = {};
+				_files[data.filename].chunks = [];
+				_files[data.filename].chunksGotten = Array.apply(null, new Array(data.totalChunks)).map(Number.prototype.valueOf,0);
+				_files[data.filename].name = data.filename;
+				_files[data.filename].size = data.filename;
+				_files[data.filename].type = data.filename;
+			}
+			if (_files[data.filename].chunksGotten[data.piece] === 0) {
+				_files[data.filename].chunks[data.piece] = data.blob;
+				_files[data.filename].chunksGotten[data.piece] = 1;
+			} else {
+				console.log('Recieved duplicate piece no: ' + data.piece);
+			}
+			if (_files[data.filename].chunksGotten.indexOf(0) === -1) {
+				var blob = new Blob(_files[data.filename].chunks, {type: data.filetype});
+				window.saveAs(blob, data.file);
+			} else {
+				var newRequest = JSON.parse(JSON.stringify(data));
+				newRequest.type = 'fileRequest';
+				//convert 0/1 array to int
+				newRequest.needed = parseInt(_files[data.filename].chunksGotten.join(''),2);
+				useDataConn.rawSend(target, newRequest);
 			}
 			break;
 		}
@@ -198,13 +235,23 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 
 		this.add = function (dataConn) {
 			this.connections[dataConn.peer] = dataConn;
-			this.updateListDisplay();
 			dataConn.on('data',function (data) {
+				debugger;
 				recieveData (data);
 			});
+			dataConn.on('error', function (e) {
+				console.error(e.message);
+				debugger;
+			});
 			dataConn.on('close',function () {
+				debugger;
 				useDataConn.updateListDisplay();
 				addMessage ('Connection Status', 'Closed');
+			});
+			dataConn.on('open', function() {
+				debugger;
+				addMessage ('User has connected', dataConn.peer);
+				this.updateListDisplay();
 			});
 		};
 
@@ -269,21 +316,17 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		var dataConn = peer.connect(theirId.get(0).value, {
 			reliable: true
 		});
-		dataConn.on('open', function() {
-			useDataConn.add(dataConn);
-			addMessage ('Connected to', dataConn.peer);
-		});
+		useDataConn.add(dataConn);
 	});
 
 	peer.on('connection', function (dataConn) {
-		dataConn.on('open', function() {
-			useDataConn.add(dataConn);
-			addMessage ('User has connected', dataConn.peer);
-		});
+		useDataConn.add(dataConn);
 	});
 
 	peer.on('error', function (error) {
-		addMessage ('Error', error);
+		addMessage ('Error', error.message);
+		console.error(error.message);
+		debugger;
 	});
 
 	function submitmessage () {
@@ -293,27 +336,51 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		addMessage('Me', data);
 		messages.scrollTop = messages.scrollHeight;
 	}
+
 	textData.on('keyup', function(e) {
-		if (e.which == 13 || event.keyCode == 13) {
+		if (e.which === 13 || e.keyCode === 13) {
 			submitmessage();
 			e.preventDefault();
 			return false;
 		}
 	});
+
 	messageBtn.on('click', function () {
 		submitmessage();
 	});
 
 	myDropzone.on('addedfile', function (file) {
-		useDataConn.sendFile(file);
-		addMessage('Making file available', file.name);
+		var reader = new FileReader();
+		reader.readAsArrayBuffer(file);
+		reader.onload = function () {
+			//break blob up in to chunks.
+			var wholeFile = ab2str(reader.result);
+			console.log(file);
+			_files[file.name] = {};
+			_files[file.name].chunks = [];
+			var chunk = 0;
+			while(wholeFile.length > _chunksize / 2) {
+				_files[file.name].chunks[chunk++] = str2ab(wholeFile.slice(0, _chunksize / 2));
+				wholeFile = wholeFile.slice(_chunksize / 2);
+			}
+			_files[file.name].chunks[chunk++] = str2ab(wholeFile);
+			_files[file.name].name = file.name;
+			_files[file.name].size = file.size;
+			_files[file.name].type = file.type;
+
+			//16bits per char
+			useDataConn.sendFile(file.name);
+			addMessage('Making file available', file);
+		};
+		reader.onerror = function (e) {
+			console.log(e);
+		};
 	});
 
-	window.onunload=function(){
+	window.onunload = function(){
 		useDataConn.send('Disconnecting');
 		useDataConn.close();
 	};
-
 
 	return '\'Allo \'Allo!';
 });
