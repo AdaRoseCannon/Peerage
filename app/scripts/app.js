@@ -80,7 +80,7 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		var node=document.createElement('li');
 		node.classList.add('list-group-item');
 		node.innerHTML = '<a href="#" onclick="return false;"> ' + message + ': ' + filename + '</a>';
-		node.onclick = function() { useDataConn.rawSend(origin, {timestamp: Date.now(), type: 'fileRequest', filename: filename, user: peerId}); return false; };
+		node.onclick = function() { useDataConn.rawSendAll({timestamp: Date.now(), type: 'fileRequest', filename: filename, user: peerId}); return false; };
 		messages.appendChild(node);
 	}
 
@@ -119,28 +119,47 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 			addDownloadLink(data.user + ' is sending', data.filename, data.user);
 			break;
 		case 'fileRequest': // Recieved a request that someone wants to download a file
-			var data2 = {};//JSON.parse(JSON.stringify(data));
-			data2.piece = 0;
-			if (data.needed) {
-				//need to make this more clever for multiple peers
-				data2.piece = data.needed.indexOf('0');
-				if (data2.piece === -1) {
-					console.error('No file pieces needed so request should not\'ve been made');
-					console.error(data.needed);
-					break;
+			if (_files[data.filename] !== undefined) {
+				var data2 = {};//JSON.parse(JSON.stringify(data));
+				data2.piece = 0;
+				if (data.needed) {
+					//need to make this more clever for multiple peers
+					data2.piece = data.needed.indexOf('0');
+					if (data2.piece === -1) {
+						console.error('No file pieces needed so request should not\'ve been made');
+						console.error(data.needed);
+						break;
+					}
 				}
+				if (_files[data.filename].chunks !== undefined) {
+					//This file is being seeded from an already downloaded file
+					//Use the existing chunks.
+					if (data2.totalChunks === _files[data.filename].chunks.length ||  data2.totalChunks === undefined) {
+						if ( _files[data.filename].chunks[data2.piece]) {
+							data2.blob = _files[data.filename].chunks[data2.piece];
+							data2.totalChunks = _files[data.filename].chunks.length;
+						} else {
+							console.log('Have not got requested piece');
+							break;
+						}
+					} else {
+						console.log('The number of chunks in the requested file and the file I have is different.');
+						break;
+					}
+				} else {
+					data2.blob = ab2getChunk(_files[data.filename].buffer, data2.piece);
+					data2.totalChunks = _files[data.filename].noChunks;
+				}
+				data2.timestamp = Date.now();
+				data2.user = peerId;
+				data2.type = 'fileDownload';
+				data2.filename = data.filename;
+				data2.filesize = _files[data.filename].size;
+				data2.filetype = _files[data.filename].type;
+				data2.firstPiece =  (data.firstPiece === undefined);
+				console.log('Sending chunk ' + data2.piece + ' of ' + data2.filename + ' in ' + data2.totalChunks +  ' chunks');
+				useDataConn.rawSend(data.user, data2);
 			}
-			data2.blob = ab2getChunk(_files[data.filename].buffer, data2.piece);
-			data2.totalChunks = _files[data.filename].noChunks;
-			data2.timestamp = Date.now();
-			data2.user = peerId;
-			data2.type = 'fileDownload';
-			data2.filename = data.filename;
-			data2.filesize = _files[data.filename].size;
-			data2.filetype = _files[data.filename].type;
-			data2.firstPiece =  (data.firstPiece === undefined);
-			console.log('Sending chunk ' + data2.piece + ' of ' + data2.filename + ' in ' + data2.totalChunks +  ' chunks');
-			useDataConn.rawSend(data.user, data2);
 			break;
 		case 'fileDownload': // A file has been given to you.
 			if (data.firstPiece) {
@@ -162,11 +181,12 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 				window.saveAs(blob, data.filename);
 			} else {
 				var newRequest = JSON.parse(JSON.stringify(data));
+				newRequest.expectChunks = 
 				newRequest.type = 'fileRequest';
 				newRequest.user = peerId;
 				//convert 0/1 array to int
 				newRequest.needed = _files[data.filename].chunksGotten.join('');
-				useDataConn.rawSend(data.user, newRequest);
+				useDataConn.rawSendAll(newRequest);
 			}
 			break;
 		}
@@ -177,9 +197,9 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		if (timestamps.indexOf(data.timestamp) === -1) {
 			processData(data);
 			if (data.type !== 'fileDownload' && data.type !== 'fileRequest') {
-				//This message is new to me so I will retransmit to make sure everyone else has it.
+				//This message is new to me so I will rawSendAll to make sure everyone else has it.
 				timestamps.push(data.timestamp);
-				useDataConn.retransmit(data);
+				useDataConn.rawSendAll(data);
 			}
 		}
 	}
@@ -229,7 +249,6 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		this.add = function (dataConn) {
 			_connections[dataConn.peer] = dataConn;
 			dataConn.on('data',function (data) {
-				
 				recieveData (data);
 			});
 			dataConn.on('error', function (e) {
@@ -237,8 +256,7 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 				
 			});
 			dataConn.on('close',function () {
-				
-				useDataConn.updateListDisplay();
+				self.updateListDisplay();
 				addMessage ('Connection Status', 'Closed');
 			});
 			dataConn.on('open', function() {
@@ -268,7 +286,7 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 			}
 		};
 
-		this.retransmit = function (data) {
+		this.rawSendAll = function (data) {
 			for(var i in _connections) {
 				_connections[i].send(data);
 			}
