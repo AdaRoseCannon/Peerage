@@ -11,7 +11,7 @@ var timestamps = [];
 var useDataConn;
 var currentCall;
 var _files = {};
-var _chunksize = 10000;
+var _chunksize = Math.pow(2,18);
 
 
 navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
@@ -20,21 +20,9 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	'use strict';
 	var myDropzone = new Dropzone('#dropzone', { url: '/', autoProcessQueue: false});
 
-	function pad(n, len) {
-		return (new Array(len + 1).join('0') + n).slice(-len);
-	}
-
-	function ab2str(buf) {
-		return String.fromCharCode.apply(null, new Uint16Array(buf));
-	}
-
-	function str2ab(str) {
-		var buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
-		var bufView = new Uint16Array(buf);
-		for (var i=0, strLen=str.length; i<strLen; i++) {
-			bufView[i] = str.charCodeAt(i);
-		}
-		return buf;
+	function ab2getChunk(buf,i) {
+		var p = i * _chunksize;
+		return buf.slice(p, p + _chunksize);
 	}
 
 	$.fn.dndhover = function() {
@@ -88,11 +76,11 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		currentCall.close();
 	});
 
-	function addDownloadLink (name, data, origin) {
+	function addDownloadLink (message, filename, origin) {
 		var node=document.createElement('li');
 		node.classList.add('list-group-item');
-		node.innerHTML = '<a href="#" onclick="return false;"> ' + name + ': ' + data + '</a>';
-		node.onclick = function() { useDataConn.rawSend(origin, {timestamp: Date.now(), type: 'fileRequest', file: data, user: peerId}); return false; };
+		node.innerHTML = '<a href="#" onclick="return false;"> ' + message + ': ' + filename + '</a>';
+		node.onclick = function() { useDataConn.rawSend(origin, {timestamp: Date.now(), type: 'fileRequest', filename: filename, user: peerId}); return false; };
 		messages.appendChild(node);
 	}
 
@@ -122,34 +110,37 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	}
 
 	function processData(data) {
-		console.log(data.type + ' signal sent');
+		//console.log(data.type + ' signal sent');
 		switch(data.type) {
 		case 'message':
 			addMessage (data.user, data.data);
 			break;
 		case 'file': // Alerted a file is available
-			addDownloadLink(data.user + ' is sending', data.file, data.user);
+			addDownloadLink(data.user + ' is sending', data.filename, data.user);
 			break;
 		case 'fileRequest': // Recieved a request that someone wants to download a file
-			var target = data.user;
 			var data2 = {};//JSON.parse(JSON.stringify(data));
 			data2.piece = 0;
 			if (data.needed) {
-				//convert int to 0/1 array 
-				var hasArray = pad((data.needed).toString(2),data.totalChunks).split('').map(parseFloat);
 				//need to make this more clever for multiple peers
-				data2.piece = hasArray.indexOf(0);
+				data2.piece = data.needed.indexOf("0");
+				if (data2.piece === -1) {
+					console.error("No file pieces needed so request should not've been made.");
+					console.error(data.needed);
+					break;
+				}
 			}
-			data2.blob = _files[data.file].chunks[data2.blob];
-			data2.totalChunks = _files[data.file].chunks.length;
+			data2.blob = ab2getChunk(_files[data.filename].buffer, data2.piece);
+			data2.totalChunks = _files[data.filename].noChunks;
 			data2.timestamp = Date.now();
 			data2.user = peerId;
 			data2.type = 'fileDownload';
-			data2.filename = data.file;
-			data2.filesize = _files[data.file].size;
-			data2.filetype = _files[data.file].type;
+			data2.filename = data.filename;
+			data2.filesize = _files[data.filename].size;
+			data2.filetype = _files[data.filename].type;
 			data2.firstPiece =  (data.firstPiece === undefined);
-			useDataConn.rawSend(target, data2);
+			console.log('Sending chunk ' + data2.piece + ' of ' + data2.filename + ' in ' + data2.totalChunks +  ' chunks');
+			useDataConn.rawSend(data.user, data2);
 			break;
 		case 'fileDownload': // A file has been given to you.
 			if (data.firstPiece) {
@@ -168,13 +159,14 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 			}
 			if (_files[data.filename].chunksGotten.indexOf(0) === -1) {
 				var blob = new Blob(_files[data.filename].chunks, {type: data.filetype});
-				window.saveAs(blob, data.file);
+				window.saveAs(blob, data.filename);
 			} else {
 				var newRequest = JSON.parse(JSON.stringify(data));
 				newRequest.type = 'fileRequest';
+				newRequest.user = peerId;
 				//convert 0/1 array to int
-				newRequest.needed = parseInt(_files[data.filename].chunksGotten.join(''),2);
-				useDataConn.rawSend(target, newRequest);
+				newRequest.needed = _files[data.filename].chunksGotten.join('');
+				useDataConn.rawSend(data.user, newRequest);
 			}
 			break;
 		}
@@ -206,24 +198,25 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	}
 
 	function UseDataConn () {
-		this.connections = {};
+		var _connections = {};
+		var self = this;
 
 		this.updateListDisplay = function () {
 			people.innerHTML = '';
 			var count = 0;
-			for(var i in this.connections) {
+			for(var i in _connections) {
 				theirId.get(0).value = '';
-				if (this.connections[i].open) {
+				if (_connections[i].open) {
 					count++;
 					var node=document.createElement('li');
 					node.classList.add('list-group-item');
-					node.innerHTML = '<a href="#" onclick="return false;">' + this.connections[i].peer + '</a>';
+					node.innerHTML = '<a href="#" onclick="return false;">' + _connections[i].peer + '</a>';
 					node.innerHTML += '<span class="badge"><span class="phonebutton glyphicon glyphicon-earphone"></span></span>';
 					node.onclick = function() { makeCall(useDataConn.connections[i].peer); return false;};
 					people.appendChild(node);
 				} else {
-					this.connections[i].close();
-					delete this.connections[i];
+					_connections[i].close();
+					delete _connections[i];
 				}
 			}
 			if (count !== 0) {
@@ -234,57 +227,56 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		};
 
 		this.add = function (dataConn) {
-			this.connections[dataConn.peer] = dataConn;
+			_connections[dataConn.peer] = dataConn;
 			dataConn.on('data',function (data) {
-				debugger;
+				
 				recieveData (data);
 			});
 			dataConn.on('error', function (e) {
 				console.error(e.message);
-				debugger;
+				
 			});
 			dataConn.on('close',function () {
-				debugger;
+				
 				useDataConn.updateListDisplay();
 				addMessage ('Connection Status', 'Closed');
 			});
 			dataConn.on('open', function() {
-				debugger;
 				addMessage ('User has connected', dataConn.peer);
-				this.updateListDisplay();
+				self.updateListDisplay();
 			});
 		};
 
 		this.rawSend = function (id, data) {
-			console.log('requesting "' + data.type + '" from ' + this.connections[id].peer);
-			this.connections[id].send(data);
+			//console.log('requesting "' + data.type + '" from ' + _connections[id].peer);
+			_connections[id].send(data);
 		};
 
 		this.send = function (data) {
 			var timestamp = Date.now();
 			timestamps.push(timestamp);
-			for(var i in this.connections) {
-				this.connections[i].send({timestamp: timestamp, user: peerId, type:'message', data: data});
+			for(var i in _connections) {
+				_connections[i].send({timestamp: timestamp, user: peerId, type:'message', data: data});
 			}
 		};
 
 		this.sendFile = function (file) {
 			var timestamp = Date.now();
 			timestamps.push(timestamp);
-			for(var i in this.connections) {
-				this.connections[i].send({timestamp: timestamp, user: peerId, type:'file', file: file.name, filetype: file.type});
+			for(var i in _connections) {
+				_connections[i].send({timestamp: timestamp, user: peerId, type:'file', filename: file.name, filetype: file.type});
 			}
 		};
 
 		this.retransmit = function (data) {
-			for(var i in this.connections) {
-				this.connections[i].send(data);
+			for(var i in _connections) {
+				_connections[i].send(data);
 			}
 		};
 
 		this.close = function () {
-			for(var i in this.connections) {
-				this.connections[i].close();
+			for(var i in _connections) {
+				_connections[i].close();
 			}
 		};
 	}
@@ -292,7 +284,7 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	useDataConn = new UseDataConn();
 
 	theirId.get(0).value = '';
-	var peer = new Peer({host:'/', port: '9000', debug:3});
+	var peer = new Peer({host:'/', port: '9000', debug:1});
 
 	peer.on('open', function(id) {
 		myId.get(0).value = id;
@@ -326,7 +318,7 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 	peer.on('error', function (error) {
 		addMessage ('Error', error.message);
 		console.error(error.message);
-		debugger;
+		
 	});
 
 	function submitmessage () {
@@ -353,24 +345,16 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 		var reader = new FileReader();
 		reader.readAsArrayBuffer(file);
 		reader.onload = function () {
-			//break blob up in to chunks.
-			var wholeFile = ab2str(reader.result);
-			console.log(file);
 			_files[file.name] = {};
-			_files[file.name].chunks = [];
-			var chunk = 0;
-			while(wholeFile.length > _chunksize / 2) {
-				_files[file.name].chunks[chunk++] = str2ab(wholeFile.slice(0, _chunksize / 2));
-				wholeFile = wholeFile.slice(_chunksize / 2);
-			}
-			_files[file.name].chunks[chunk++] = str2ab(wholeFile);
 			_files[file.name].name = file.name;
 			_files[file.name].size = file.size;
 			_files[file.name].type = file.type;
+			_files[file.name].buffer = reader.result;
+			_files[file.name].noChunks = Math.ceil(reader.result.byteLength / _chunksize);
+			_files[file.name].chunksize = _chunksize;
 
-			//16bits per char
-			useDataConn.sendFile(file.name);
-			addMessage('Making file available', file);
+			useDataConn.sendFile(file);
+			addMessage('Making file available', file.name);
 		};
 		reader.onerror = function (e) {
 			console.log(e);
