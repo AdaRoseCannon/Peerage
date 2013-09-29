@@ -123,9 +123,9 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 			data2.piece = 0;
 			if (data.needed) {
 				//need to make this more clever for multiple peers
-				data2.piece = data.needed.indexOf("0");
+				data2.piece = data.needed.indexOf('0');
 				if (data2.piece === -1) {
-					console.error("No file pieces needed so request should not've been made.");
+					console.error('No file pieces needed so request should not\'ve been made');
 					console.error(data.needed);
 					break;
 				}
@@ -212,7 +212,7 @@ define(['dropzone-amd-module', 'filesaver'], function (Dropzone, saveAs) {
 					node.classList.add('list-group-item');
 					node.innerHTML = '<a href="#" onclick="return false;">' + _connections[i].peer + '</a>';
 					node.innerHTML += '<span class="badge"><span class="phonebutton glyphicon glyphicon-earphone"></span></span>';
-					node.onclick = function() { makeCall(useDataConn.connections[i].peer); return false;};
+					node.onclick = function() { makeCall(_connections[i].peer); return false;};
 					people.appendChild(node);
 				} else {
 					_connections[i].close();
